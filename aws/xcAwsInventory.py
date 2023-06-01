@@ -32,9 +32,9 @@ cfg = {
     'logLevel': 'info',
     'regions': [],
     'iniFilePath': '~/xcdata.ini',
-    'tagForMainGroup': 'Name', # имя тега для "основной группы" хоста, все остальные запихнуться в "parent" или в "tags"
-    'tagForParentGroup': 'role', # имя тега для "родительской группы"
-    'workgroup': 'devops', # имя для дефолтной workgroup
+    'tagForMainGroup': 'Name', # tag 'Key' for 'mainGroup', all others tags will be added in 'parent' or 'tags' groups
+    'tagForParentGroup': 'role', # tag 'Key' for 'parentGroup'
+    'workgroup': 'devops', # name for default 'workgroup'
     'awsHostField': 'PublicDnsName', # field for 'host' in aws data, variants: PublicDnsName, PublicIpAddress, PrivateDnsName, PrivateIpAddress
 }
 
@@ -149,7 +149,7 @@ if __name__ == "__main__":
             if not os.path.isdir(dirPath):
                 raise
 
-    # выбор логлевела
+    # loglevel choice
     if re.match(r"^(warn|warning)$", cfg['logLevel'], re.IGNORECASE):
         logLevel = logging.WARNING
     elif re.match(r"^debug$", cfg['logLevel'], re.IGNORECASE):
@@ -191,14 +191,13 @@ if __name__ == "__main__":
     groups = list()
     hosts = list()
     for instanceInfo in instancesInfoArray:
-        # добавляем датацентр в общий список дц
+        # adding data-center in dc list
         if instanceInfo['dc'] not in datacenters:
             datacenters.append(instanceInfo['dc'])
-        # формируем workgroups
-        # workgroups это обязательный параметр, без него не будут работать tags=
-        # берём дефолт из конфига
-        workgroups = [ cfg['workgroup'] ]
-        # проходиться по тегам и сортируем их по типам {{
+        # making "workgroups"
+        # "workgroups" it's required param, without this param, tags= not worked
+        workgroups = [ cfg['workgroup'] ] # get default from cfg
+        # sorting tags by types {{
         mainGroupName = None
         parentGroupName = None
         tagsGroupNames = None
@@ -206,26 +205,26 @@ if __name__ == "__main__":
             groupName = 'tag' + '_' + tag['Key'].replace('-','_') + '_' + tag['Value'].replace('-','_')
             groupName = re.sub(r'\s+', '_', groupName)
             if tag['Key'] == cfg['tagForMainGroup']:
-                # из этого тега делаем "основную группу"
+                # from this tag making "main group"
                 mainGroupName = groupName
             elif tag['Key'] == cfg['tagForParentGroup']:
-                # из этого тега делаем "родительскую группу"
+                # from this tag making "parant group"
                 parentGroupName = groupName
-                # сразу добавляем её в список "всех групп" как есть
+                # and added in "all group" list
                 if parentGroupName not in groups:
                     groups.append(parentGroupName)
             else:
-                # если ни с чём не совпало, то закидываем их в сущность 'tags'
+                # if not matched anything, then adding in "xcdata tags"
                 if tagsGroupNames:
                     tagsGroupNames = tagsGroupNames + ',' + groupName
                 else:
                     tagsGroupNames = groupName
         # }}
-        # формируем строку для группу в секции [groups] {{
+        # making string for section [groups] {{
         if mainGroupName:
             groupLine = mainGroupName + ' wg=' + cfg['workgroup']
         else:
-            # mainGroupName обязательный
+            # mainGroupName required
             logging.warning("%s: mainGroupName not found for host, instanceInfo='%s', skipping" % (defName,json.dumps(instanceInfo)))
             continue
         if parentGroupName:
@@ -236,7 +235,7 @@ if __name__ == "__main__":
             groups.append(groupLine)
         # }}
 
-        # формируем строку host в секции [hosts]
+        # making string for section [hosts]
         host = instanceInfo['host'] + ' group=' + mainGroupName + ' dc=' + instanceInfo['dc']
         if host not in hosts:
             hosts.append(host)
@@ -246,7 +245,7 @@ if __name__ == "__main__":
     logging.debug("%s: groups='%s'" % (defName,groups))
     logging.debug("%s: hosts='%s'" % (defName,hosts))
 
-    # генерим data file для инвентори {{
+    # making xcdata.ini {{
     config = '[datacenters]'
     for datacenter in datacenters:
         config = config + '\n' + str(datacenter)
