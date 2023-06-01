@@ -35,6 +35,7 @@ cfg = {
     'tagForMainGroup': 'Name', # имя тега для "основной группы" хоста, все остальные запихнуться в "parent" или в "tags"
     'tagForParentGroup': 'role', # имя тега для "родительской группы"
     'workgroup': 'devops', # имя для дефолтной workgroup
+    'awsHostField': 'PublicDnsName', # field for 'host' in aws data, variants: PublicDnsName, PublicIpAddress, PrivateDnsName, PrivateIpAddress
 }
 
 # parse args
@@ -131,7 +132,7 @@ def getInstancesInfo(region):
             info = {
                 'dc': instance['Placement']['AvailabilityZone'],
                 'tags': instance['Tags'],
-                'host': instance['PublicDnsName'],
+                'host': instance[cfg['awsHostField']],
             }
             if info not in instancesInfo:
                 instancesInfo.append(info)
@@ -174,6 +175,8 @@ if __name__ == "__main__":
     # }}
 
     defName = "main"
+    logging.debug("%s: cfg='%s'" % (defName,json.dumps(cfg,indent=4)))
+
     if cfg['regions']:
         regions = cfg['regions']
     else:
