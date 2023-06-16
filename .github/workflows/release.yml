@@ -8,6 +8,7 @@ name: release
 
 jobs:
   create_release:
+    permissions: write-all
     name: create release
     runs-on: ubuntu-latest
     outputs:
